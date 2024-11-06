@@ -5,8 +5,8 @@ import (
 	"github.com/jackc/pgx/v4"
 	"context"
 
-	. "gw-currency-wallet/cmd/data"
-	. "gw-currency-wallet/cmd/handlers"
+	. "gw-currency-wallet/internal/data"
+	. "gw-currency-wallet/internal/handlers"
 )
 
 // немного мешанины, так как изначально планировалось делать все в одном файле, но он слишком разросся

@@ -8,7 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v4"
 
-	. "gw-currency-wallet/cmd/data"
+	. "gw-currency-wallet/internal/data"
 	log "github.com/sirupsen/logrus"
 )
 

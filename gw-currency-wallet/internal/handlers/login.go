@@ -7,7 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"crypto/md5"
 	"encoding/hex"
-	. "gw-currency-wallet/cmd/data"
+	. "gw-currency-wallet/internal/data"
 	log "github.com/sirupsen/logrus"
 )
 

@@ -7,11 +7,11 @@ import (
 	"net/http"
 	"fmt"
 
-	. "gw-currency-wallet/cmd/data"
+	. "gw-currency-wallet/internal/data"
 	log "github.com/sirupsen/logrus"
 )
 
-func Withdraw(ctx *gin.Context) {
+func Deposit(ctx *gin.Context) {
 	authHeader := ctx.GetHeader("Authorization")
 
 	if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {
@@ -31,51 +31,19 @@ func Withdraw(ctx *gin.Context) {
 		return
 	}
 
-	query := `
-	SELECT w.balance_usd, w.balance_eur, w.balance_rub
-	FROM JWTTokens AS tk
-	JOIN Users AS u ON tk.user_id = u.id
-	JOIN Wallets AS w ON u.wallet_id = w.id
-	WHERE tk.token = $1;`
-
-	var balance_usd float64
-	var balance_eur float64
-	var balance_rub float64
-
-	Err = DB.QueryRow(ctx, query, token).Scan(&balance_usd, &balance_eur, &balance_rub)
-	if Err == pgx.ErrNoRows {
-		log.Errorf("Token not found: %v", Err)
-		ctx.JSON(http.StatusNotFound, gin.H{"error": "token not found"})
-		return
-	} else if Err != nil {
-		log.Errorf("Database error: %v", Err)
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "database error"})
-		return
-	}
-
 	switch dep.Currency {
 	case "RUB":
-		if balance_rub < dep.Amount {
-			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Insufficient funds or invalid amount"})
-			return
-		}
 		break
 	case "EUR":
-		if balance_eur < dep.Amount {
-			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Insufficient funds or invalid amount"})
-			return
-		}
 		break
 	case "USD":
-		if balance_usd < dep.Amount {
-			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Insufficient funds or invalid amount"})
-			return
-		}
 		break
 	default:
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Insufficient funds or invalid amount"})
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid amount or currency"})
 		return
 	}
+
+	// проверки на каст к float нет, так как все равно он не сможет заанмаршалить что-то, помимо float
 
 	tx, err := DB.Begin(ctx)
 	if err != nil {
@@ -88,7 +56,7 @@ func Withdraw(ctx *gin.Context) {
 
 	var builder strings.Builder
 	builder.WriteString("UPDATE wallets ")
-	builder.WriteString(fmt.Sprintf("SET %s = %s - $1 ", valueStr, valueStr))
+	builder.WriteString(fmt.Sprintf("SET %s = %s + $1 ", valueStr, valueStr))
 	builder.WriteString("WHERE id = ( ")
 	builder.WriteString("SELECT wallets.id ")
 	builder.WriteString("FROM JWTTokens ")
@@ -122,12 +90,38 @@ func Withdraw(ctx *gin.Context) {
 		}
 	}()
 
+
+	// по хорошему, этот запрос можно выделить в отдельную функцию
+	query := `
+	SELECT w.balance_usd, w.balance_eur, w.balance_rub
+	FROM JWTTokens AS tk
+	JOIN Users AS u ON tk.user_id = u.id
+	JOIN Wallets AS w ON u.wallet_id = w.id
+	WHERE tk.token = $1;`
+
+	var balance_usd float64
+	var balance_eur float64
+	var balance_rub float64
+
+	Err = DB.QueryRow(ctx, query, token).Scan(&balance_usd, &balance_eur, &balance_rub)
+	if Err == pgx.ErrNoRows {
+		log.Errorf("Token not found: %v", Err)
+		ctx.JSON(http.StatusNotFound, gin.H{"error": "token not found"})
+		return
+	} else if Err != nil {
+		log.Errorf("Database error: %v", Err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "database error"})
+		return
+	}
+
 	ctx.JSON(http.StatusOK, gin.H{
-		"message": "Withdrawal successful",
+		"message": "Account topped up successfully",
 		"new_balance": gin.H{
 			"USD": balance_usd,
 			"RUB": balance_rub,
 			"EUR": balance_eur,
 		},
 	})
+
+	return
 }

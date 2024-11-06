@@ -3,7 +3,7 @@ package main
 import (
 	"log"
 	"net"
-	pb "gw-exchanger/internal/proto/exchange"
+	pb "github.com/zxckontolxd/proto-exchange/exchange"
 	"context"
     "google.golang.org/grpc"
 )

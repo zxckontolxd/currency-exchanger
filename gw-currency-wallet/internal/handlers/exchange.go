@@ -1,9 +1,9 @@
 package handlers
 
 import (
-	pb "gw-currency-wallet/internal/proto/exchange"
+	pb "github.com/zxckontolxd/proto-exchange/exchange"
     log "github.com/sirupsen/logrus"
-	. "gw-currency-wallet/cmd/data"
+	. "gw-currency-wallet/internal/data"
 
     "google.golang.org/grpc"
     "net/http"
