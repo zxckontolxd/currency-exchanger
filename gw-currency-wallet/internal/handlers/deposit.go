@@ -66,12 +66,14 @@ func Deposit(ctx *gin.Context) {
 
 	_, err = tx.Exec(ctx, builder.String(), dep.Amount, token)
 	if err != nil {
-		log.Errorf("Error to update wallet: %v", err)
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "database error"})
-		return
+		DB, Err = Reconnect(ctx, DB)
+		if Err != nil {
+			log.Errorf("Error to update wallet: %v", err)
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "database error"})
+			return
+		}
+		
 	}
-
-
 
 	defer func() {
 			if err != nil {

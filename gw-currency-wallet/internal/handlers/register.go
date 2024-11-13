@@ -21,15 +21,22 @@ func Register(ctx *gin.Context) {
 	var emailExist bool
 	Err = DB.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM users WHERE email=$1);", user.Email).Scan(&emailExist)
 	if Err != nil {
-		log.Errorf("Error querying database for email existence: %v", Err)
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "database error"})
-		return
+		DB, Err = Reconnect(ctx, DB)
+		if Err != nil {
+			log.Errorf("Error querying database for email existence: %v", Err)
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "database error"})
+			return
+		}
+		
 	}
 	Err := DB.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM users WHERE username=$1);", user.Username).Scan(&usernameExist)
 	if Err != nil {
-		log.Errorf("Error querying database for username existence: %v", Err)
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "database error"})
-		return
+		DB, Err = Reconnect(ctx, DB)
+		if Err != nil {
+			log.Errorf("Error querying database for username existence: %v", Err)
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "database error"})
+			return
+		}
 	}
 
 	log.Info(usernameExist)
@@ -43,9 +50,12 @@ func Register(ctx *gin.Context) {
 	var walletId int
 	Err = DB.QueryRow(ctx, "INSERT INTO wallets DEFAULT VALUES RETURNING id;").Scan(&walletId)
 	if Err != nil {
-		log.Errorf("Cannot create new wallet: %v", Err)
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "database error"})
-		return
+		DB, Err = Reconnect(ctx, DB)
+		if Err != nil {
+			log.Errorf("Cannot create new wallet: %v", Err)
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "database error"})
+			return
+		}
 	}
 
 	// тут можно было еще соль добавить
@@ -55,9 +65,12 @@ func Register(ctx *gin.Context) {
 
 	_, Err = DB.Exec(ctx, "INSERT INTO users (username, password, wallet_id, email) VALUES ($1, $2, $3, $4);", user.Username, passHesh, walletId, user.Email)
 	if Err != nil {
-		log.Error("Insert user error: %v", Err)
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "database error"})
-		return
+		DB, Err = Reconnect(ctx, DB)
+		if Err != nil {
+			log.Error("Insert user error: %v", Err)
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "database error"})
+			return
+		}
 	} else {
 		ctx.JSON(http.StatusCreated, gin.H{"message": "User registered successfully"})
 	}

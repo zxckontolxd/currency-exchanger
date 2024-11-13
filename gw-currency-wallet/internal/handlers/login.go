@@ -24,9 +24,12 @@ func Login(ctx *gin.Context) {
 	Err := DB.QueryRow(ctx, "SELECT password, id FROM users WHERE username = $1;", user.Username).Scan(&password, &userId)
 	
 	if Err != nil {
-		log.Errorf("Cannot find username: %v", Err)
-		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "User not found"})
-		return
+		DB, Err = Reconnect(ctx, DB)
+		if Err != nil {
+			log.Errorf("Cannot find username: %v", Err)
+			ctx.JSON(http.StatusUnauthorized, gin.H{"error": "User not found"})
+			return
+		}
 	}
 
 	hash := md5.New()
@@ -57,9 +60,12 @@ func Login(ctx *gin.Context) {
 
 	_, Err = DB.Exec(ctx, "INSERT INTO JWTTokens (token, expiration, user_id) VALUES ($1, $2, $3)", tokenString, expirationTime, userId)
 	if Err != nil {
-		log.Errorf("Cannot add JWT token into database: %v", Err)
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "database error"})
-		return
+		DB, Err = Reconnect(ctx, DB)
+		if Err != nil {
+			log.Errorf("Cannot add JWT token into database: %v", Err)
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "database error"})
+			return
+		}
 	}
 
 	ctx.JSON(http.StatusOK, gin.H{"token": tokenString})

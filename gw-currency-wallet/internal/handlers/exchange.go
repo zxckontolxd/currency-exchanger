@@ -46,9 +46,12 @@ func Exchange(ctx *gin.Context) {
 		ctx.JSON(http.StatusNotFound, gin.H{"error": "token not found"})
 		return
 	} else if Err != nil {
-		log.Errorf("Database error: %v", Err)
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "database error"})
-		return
+		DB, Err = Reconnect(ctx, DB)
+		if Err != nil {
+			log.Errorf("Database error: %v", Err)
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "database error"})
+			return
+		}
 	}
 
 	currencyMap := make(map[string]float64)
